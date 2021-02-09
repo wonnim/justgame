@@ -1,0 +1,558 @@
+<!DOCTYPE html>
+<html>
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no" />
+    <meta http-equiv="X-UA-Compatible" content="IE=edge,chrome=1" />
+    <meta name="HandheldFriendly" content="true" />
+    <title>Curvys Backup</title>
+    <style>
+      /* keep in head for quick overlay render */
+      #overlay {
+        position: fixed;
+        display: none;
+        width: 100%;
+        height: 100%;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        background-color: rgba(0, 0, 0);
+        z-index: 200;
+        cursor: pointer;
+      }
+
+      #overlay-text {
+        position: absolute;
+        top: 50%;
+        left: 50%;
+        font-size: 50px;
+        color: white;
+        transform: translate(-50%, -50%);
+        -ms-transform: translate(-50%, -50%);
+      }
+    </style>
+    <link id="theme" rel="stylesheet" href="" />
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/css/toastr.css" />
+    <link rel="stylesheet" href="https://use.fontawesome.com/releases/v5.5.0/css/all.css" integrity="sha384-B4dIYHKNBt8Bc12p+WXckhzcICo0wtJAoU8YZTY5qE0Id1GSseTk6S+L3BlXeVIU" crossorigin="anonymous" />
+    <link rel="stylesheet" href="styles.css" />
+    <script src="https://code.jquery.com/jquery-3.3.1.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/twitter-bootstrap/4.1.3/js/bootstrap.bundle.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/toastr.js/latest/js/toastr.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bignumber.js/8.0.1/bignumber.min.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/moment.js/2.24.0/moment-with-locales.min.js"></script>
+    <script src="scripts.js"></script>
+    <script>
+      //keep in head for quick theme load
+      if (localStorage.getItem('stylesheet') !== null) {
+        let theme = document.getElementById('theme');
+        theme.setAttribute('href', window.localStorage.getItem('stylesheet'));
+      } else {
+        theme.setAttribute('href', 'https://stackpath.bootstrapcdn.com/bootswatch/4.4.1/lux/bootstrap.min.css');
+      }
+    </script>
+    <script>
+      window.onload = function() {
+        let installed = !!window.tronWeb;
+        if (!installed) {
+          document.getElementById('div-no-tronlink').style.display = 'block';
+        }
+        else {
+          var masternode = getURL(window.location.search.substring(1)).ref;
+          if (masternode) {
+            masternode = window.tronWeb.fromAscii(masternode).padEnd(66, '0');
+            localStorage.setItem('ref', masternode);
+            console.log('Set ref to: '+masternode);
+          }
+          curvy.init(); //start game
+        }
+      };
+    </script>
+  </head>
+  <body>
+    <div id="overlay" style="display:block;">
+      <div id="overlay-text"><img src="puff.svg" style="width:100px;" /></div>
+    </div>
+    <div class="container-xl">
+      <nav class="navbar navbar-expand-lg navbar-dark bg-primary mt-3">
+        <a id="contract-symbol" class="navbar-brand" href="#">CURVY BACKUP</a>
+        <button class="navbar-toggler" type="button" data-toggle="collapse" data-target="#navbar-main" aria-controls="navbar-main" aria-expanded="false" aria-label="Toggle navigation">
+          <span class="navbar-toggler-icon"></span>
+        </button>
+        <div class="collapse navbar-collapse" id="navbar-main">
+          <ul class="navbar-nav mr-auto">
+            <li class="nav-item">
+              <a class="nav-link" href="https://curvy.ai/minnow" target="_blank">JUST.GAME</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="https://justgame.hostedwiki.co/" target="_blank">WIKI</a>
+            </li>
+            <li class="nav-item">
+              <a class="nav-link" href="https://discord.gg/e2DY9f" target="_blank">GAME CHAT</a>
+            </li>
+          </ul>
+          <div class="form-inline my-2 my-md-0" style="color:white;">
+            <a class="nav-link" href="https://curvy.ai/minnow" style="color:white;" target="_blank">By minnow with ❤️</a>
+            <ul class="navbar-nav mr-auto">
+              <li class="nav-item dropdown">
+                <a class="nav-link dropdown-toggle" href="#" id="navbarDropdown" role="button" data-toggle="dropdown" aria-haspopup="true" aria-expanded="false">
+                  Theme
+                </a>
+                <div class="dropdown-menu dropdown-menu-right" aria-labelledby="navbarDropdown">
+                  <span class="dropdown-item" onclick="window.curvy.setTheme(0);">Default</span>
+                  <span class="dropdown-item" onclick="window.curvy.setTheme(1);">Darkly</span>
+                  <span class="dropdown-item" onclick="window.curvy.setTheme(2);">Cosmo</span>
+                  <span class="dropdown-item" onclick="window.curvy.setTheme(3);">Flatly</span>
+                  <span class="dropdown-item" onclick="window.curvy.setTheme(4);">Lumen</span>
+                  <span class="dropdown-item" onclick="window.curvy.setTheme(5);">Materia</span>
+                  <span class="dropdown-item" onclick="window.curvy.setTheme(6);">Sketchy</span>
+                  <span class="dropdown-item" onclick="window.curvy.setTheme(7);">Yeti</span>
+                </div>
+              </li>
+            </ul>
+          </div>
+        </div>
+      </nav>
+
+      <div id="div-no-tronlink" class="row" style="display:none;">
+        <div class="col-xl-12 mt-3">
+          <div class="alert alert-danger" role="alert" style="margin-bottom:0;">
+            We detected that you don't have TronLink installed. TronLink is a free browser extension that allows you to use web browser based DAPPS on the Tron Network.
+            <br />To download visit: <a href="https://www.tronlink.org" target="__blank">https://www.tronlink.org</a>
+          </div>
+        </div>
+      </div>
+
+      <!-- Column 1  -->
+      <div class="row">
+        <div class="col-xl-4 mt-3">
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">
+                Round End In
+                <button
+                  style="float:right;font-size:15px;    margin-top: -10px;"
+                  class="btn btn-sm btn-secondary"
+                  data-container="body"
+                  data-toggle="popover"
+                  data-placement="bottom"
+                  data-html="true"
+                  data-content="When this timer hits 0 the game will end and any unopened boxes will be opened for their current royalty value. 
+                  If players open boxes before the round ends they recieve 200% of the current royalty value of said boxes.
+                  <br/>More details: <a href='https://justgame.hostedwiki.co/'>Read the WIKI</a></button>"
+                >
+                  ?
+                </button>
+              </h5>
+              <div id="clockdiv">
+                <div>
+                  <span class="hours">00</span>
+                  <div class="smalltext">Hours</div>
+                </div>
+                <div>
+                  <span class="minutes">00</span>
+                  <div class="smalltext">Minutes</div>
+                </div>
+                <div>
+                  <span class="seconds">00</span>
+                  <div class="smalltext">Seconds</div>
+                </div>
+              </div>
+            </div>
+          </div>
+
+          <div class="card mt-4">
+            <div class="card-body">
+              <h5 class="card-title">
+                Current Round Details
+                <button style="float:right;font-size:15px;margin-top:-10px;" class="btn btn-sm btn-secondary" data-container="body" data-toggle="popover" data-placement="top" data-html="true" data-content="All the details of the current round. <br/>More details: <a href='https://justgame.hostedwiki.co/'>Read the WIKI</a>">?</button>
+              </h5>
+              <div class="row">
+                <label class="col-xl-5 col-form-label">Current Round:</label>
+                <label id="current-round" class="col-xl-7 col-form-label text-left">0</label>
+              </div>
+              <div class="row">
+                <label class="col-xl-5 col-form-label">Contract Balance:</label>
+                <label class="col-xl-7 col-form-label text-left">
+                  <span id="contract-balance">0.00 TRX</span>
+                  <br/>
+                  <span id="contract-balance-usd">0.00 USD</span>
+                </label>
+    
+              </div>
+              <div class="row">
+                <label class="col-xl-5 col-form-label">Total Boxes Bought:</label>
+                <label id="boxes-bought" class="col-xl-7 col-form-label text-left">0.00</label>
+              </div>
+              <div class="row">
+                <label class="col-xl-5 col-form-label">Total Boxes Opened:</label>
+                <label id="boxes-sold" class="col-xl-7 col-form-label text-left">0</label>
+              </div>
+              <div class="row">
+                <label class="col-xl-5 col-form-label">Boxes Remaining:</label>
+                <label id="boxes-existing" class="col-xl-7 col-form-label text-left">0</label>
+              </div>
+              <div class="row">
+                <label class="col-xl-5 col-form-label">Percentage Opened:</label>
+                <label id="percentage-opened" class="col-xl-7 col-form-label text-left">0</label>
+              </div>
+              <div class="row">
+                <label class="col-xl-5 col-form-label">Total Participants:</label>
+                <label id="total-participants" class="col-xl-7 col-form-label text-left">0</label>
+              </div>
+              <div class="row">
+                <label class="col-xl-5 col-form-label">Total Played:</label>
+                <label class="col-xl-7 col-form-label text-left">
+                  <span  id="total-tron">0.00 TRX</span>
+                  <br/>
+                  <span  id="total-tron-usd">0.00 USD</span>
+                </label>
+              </div>
+              <span id="fiat-trx" style="font-size:10px;"></span>
+            </div>
+          </div>
+
+          <div class="card mt-4">
+            <div class="card-body">
+              <h5 class="card-title">
+                Your Promo Details
+                <button
+                  style="float:right;font-size:15px;margin-top:-10px;"
+                  class="btn btn-sm btn-secondary"
+                  data-container="body"
+                  data-toggle="popover"
+                  data-placement="top"
+                  data-html="true"
+                  data-content="When you register a tag on the <a href=https://curvy.ai/minnow>JUST.GAME</a> website you can share the link and curvy will 
+                reward you for new players you bring in. If you send more than 2,500 TRX in one buy 
+                transaction you will receive a free tag name, otherwise its 375 TRX.<br/>More details: <a href='https://justgame.hostedwiki.co/'>Read the WIKI</a>"
+                >
+                  ?
+                </button>
+              </h5>
+
+              <div id="has-no-ref-link" class="row" style="display:none;">
+                <label class="col-xl-5 col-form-label">Register Tag to Promote:</label>
+                <div class="col-xl-7 col-form-label text-left">
+                  <a href="https://curvy.ai/minnow">JUST.GAME</a>
+                </div>
+              </div>
+
+              <div class="has-ref-link row" style="display:none;">
+                <label class="col-xl-5 col-form-label">LifetimeEarnings:</label>
+                <label id="lifetime-promo" class="player-boxes col-xl-7 col-form-label text-left">0.00 TRX</label>
+              </div>
+              <div class="has-ref-link row" style="display:none;">
+                <label class="col-xl-5 col-form-label">Current Earnings:</label>
+                <label id="promo-earnings" class="player-boxes col-xl-7 col-form-label text-left">0.00 TRX</label>
+              </div>
+
+              <div class="has-ref-link row" style="display:none;">
+                <label class="col-xl-5 col-form-label">Your Ref Link:</label>
+                <label class="div4 col-xl-7 col-form-label text-left">
+                  <a class="player-ref-link" href=""></a>
+                </label>
+              </div>
+
+              <div class="has-ref-link row" style="display:none;">
+                <div class="col-xl-12">
+                  <button id="btn-withdraw" type="button" class="btn btn-primary btn-block">Withdraw</button>
+                </div>
+              </div>
+
+              <table id="promo-table" class="table table-sm mt-2">
+                <thead>
+                  <tr>
+                    <th>Tier</th>
+                    <th>Refs</th>
+                    <th>Earned</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr>
+                    <td colspan="3" style="text-align:center;">Loading...</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+          </div>
+        </div>
+        
+
+        <!-- Column 2 -->
+        <div class="col-xl-5 mt-3">
+          <div class="card">
+            <div class="card-body">
+              <h5 class="card-title">
+                Your Account
+                <button
+                  style="float:right;font-size:15px;margin-top:-10px;"
+                  class="btn btn-sm btn-secondary"
+                  data-container="body"
+                  data-toggle="popover"
+                  data-placement="bottom"
+                  data-html="true"
+                  data-content="Some details about your account. This is your account address. If you dont have a tag name you can register for one on the 
+                <a href=https://curvy.ai/minnow>JUST.GAME</a> website. You can share the link and curvy will 
+                reward you for new players you bring in.<br/>More details: <a href='https://justgame.hostedwiki.co/'>Read the WIKI</a>">
+                  ?
+                </button>
+              </h5>
+              <form>
+                <div class="row">
+                  <label class="col-xl-3 col-form-label">Account:</label>
+                  <label id="player-account" class="div6 col-xl-9 col-form-label text-left">Not Logged In</label>
+                </div>
+                <div class="row">
+                  <label class="col-xl-3 col-form-label">Tag Name:</label>
+                  <label id="player-name" class="div4 col-xl-9 col-form-label text-left">Not Logged In</label>
+                </div>
+                <div class="row">
+                  <label class="col-xl-3 col-form-label">Your Boxes:</label>
+                  <label class="player-boxes div6 col-xl-9 col-form-label text-left">Not Logged In</label>
+                </div>
+                <div class="row">
+                  <label class="col-xl-3 col-form-label">Your Position:</label>
+                  <label class="player-position div6 col-xl-9 col-form-label text-left">Not Logged In</label>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div class="card mt-4">
+            <div class="card-body">
+              <h5 class="card-title">
+                Buy Boxes
+                <button
+                  style="float:right;font-size:15px;margin-top:-10px;"
+                  class="btn btn-sm btn-secondary"
+                  data-container="body"
+                  data-toggle="popover"
+                  data-placement="top"
+                  data-html="true"
+                  data-content="Boxes can be purchased for trx, and become cheaper as the round progresses. You must purchase at least 1 box, and can buy as many as you want.
+                The value within your boxes increases in relation to how many boxes currently exist. The value within your boxes can never decrease.
+                <br/>More details: <a href='https://justgame.hostedwiki.co/'>Read the WIKI</a>"
+                >
+                  ?
+                </button>
+              </h5>
+              <form>
+                <div class="row">
+                  <label class="col-xl-3 col-form-label">Box Price:</label>
+                  <label id="box-price" class="div4 col-xl-9 col-form-label text-left">25 TRX</label>
+                </div>
+                <div class="row mb-3">
+                  <label class="col-xl-3 col-form-label">Actual Price:</label>
+                  <label id="final-box-price" class="div4 col-xl-9 col-form-label text-left">25 TRX</label>
+                </div>
+                <div class="row">
+                  <label class="col-xl-3 col-form-label">TRX to Spend:</label>
+                  <div class="col-xl-9">
+                    <input id="txt-buy-amount" type="number" class="form-control" style="border:1px solid #c9c9c9 !important;" />
+                  </div>
+                </div>
+                <div id="boxes-for-trx-div" class="row mt-2" style="display:none;">
+                  <label class="col-xl-3 col-form-label">You'll Get:</label>
+                  <label id="boxes-for-trx" class="div6 col-xl-9 col-form-label text-left"></label>
+                </div>
+                <div class="row mt-3" id="boxes-for-trx" style="display:hidden;">
+                  <div class="col-xl-12">
+                    <button id="btn-buy" type="button" class="btn btn-primary btn-block">Buy Boxes</button>
+                  </div>
+                </div>
+                <div class="row">
+                  <div class="col-xl-6">
+                    <span class="text-muted" style="font-size:10px;">Minimum buy of 25 TRX</span>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div class="card mt-4">
+            <div class="card-body">
+              <h5 class="card-title">
+                Glitch Happens In
+                <button
+                  style="float:right;font-size:15px;margin-top:-10px;"
+                  class="btn btn-sm btn-secondary"
+                  data-container="body"
+                  data-toggle="popover"
+                  data-placement="top"
+                  data-html="true"
+                  data-content="As the timer counts down and gets closer to zero, special events will happen at several different time thresholds which will 
+                  increase the value further for all unopened giftboxes.
+                <br/>More details: <a href='https://justgame.hostedwiki.co/'>Read the WIKI</a>"
+                >
+                  ?
+                </button>
+              </h5>
+              <div id="glitchdiv">
+                <div>
+                  <span class="hours">00</span>
+                  <div class="smalltext">Hours</div>
+                </div>
+                <div>
+                  <span class="minutes">00</span>
+                  <div class="smalltext">Minutes</div>
+                </div>
+                <div>
+                  <span class="seconds">00</span>
+                  <div class="smalltext">Seconds</div>
+                </div>
+              </div>
+              <div class="row mt-3">
+                <label class="col-xl-3 col-form-label">Glitch Value:</label>
+                <label id="glitch-value" class="div6 col-xl-9 col-form-label text-left"></label>
+              </div>
+            </div>
+          </div>
+
+          <div class="card mt-4">
+            <div class="card-body">
+              <h5 class="card-title">
+                Reinvest Your Earnings
+                <button
+                  style="float:right;font-size:15px;margin-top:-10px;"
+                  class="btn btn-sm btn-secondary"
+                  data-container="body"
+                  data-toggle="popover"
+                  data-placement="top"
+                  data-html="true"
+                  data-content="A player can re-invest the value inside their existing giftboxes to purchase more giftboxes at any time. 
+                  A player who has value reinvested, gets twice the total amount they have in current giftboxes value in newly purchased boxes, 
+                  while also keeping the existing boxes they already own
+              <br/>More details: <a href='https://justgame.hostedwiki.co/'>Read the WIKI</a>">
+                  ?
+                </button>
+              </h5>
+              <form>
+                <div class="row">
+                  <label class="col-xl-4 col-form-label">Your Boxes:</label>
+                  <label class="player-boxes div6 col-xl-8 col-form-label text-left">0</label>
+                </div>
+                <div class="row">
+                  <label class="col-xl-4 col-form-label">Your Earnings:</label>
+                  <label id="reinvest-total" class="div4 col-xl-8 col-form-label text-left">0 TRX</label>
+                </div>
+                <div class="row">
+                  <label class="col-xl-4 col-form-label">You will receive:</label>
+                  <label id="reinvest-reward" class="div5 col-xl-8 col-form-label text-left">0 TRX</label>
+                </div>
+                <div class="row">
+                  <div class="col-xl-12 mt-3">
+                    <button id="btn-reinvest" type="button" class="btn btn-primary btn-block">Reinvest</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+
+          <div class="card mt-4">
+            <div class="card-body">
+              <h5 class="card-title">
+                Open Boxes
+                <button
+                  style="float:right;font-size:15px;margin-top:-10px;"
+                  class="btn btn-sm btn-secondary"
+                  data-container="body"
+                  data-toggle="popover"
+                  data-placement="top"
+                  data-html="true"
+                  data-content="When boxes are opened early, the player gets 2x the current box value.All opened boxes are destroyed when opened, and the total number of boxes in existence decreases. 
+                  All other remaining unopened boxes earn more of the incoming royalties.
+              <br/>More details: <a href='https://justgame.hostedwiki.co/'>Read the WIKI</a>">
+                  ?
+                </button>
+              </h5>
+              <form>
+                <div class="row">
+                  <label class="col-xl-4 col-form-label">Your Boxes:</label>
+                  <label class="player-boxes div6 col-xl-8 col-form-label text-left">0</label>
+                </div>
+                <div class="row">
+                  <label class="col-xl-4 col-form-label">Current Box Royalties:</label>
+                  <label id="box-open-reward" class="div4 col-xl-8 col-form-label text-left">0 TRX</label>
+                </div>
+                <div class="row">
+                  <label class="col-xl-4 col-form-label">You will receive:</label>
+                  <label class="box-open-reward-total div4 col-xl-8 col-form-label text-left">0 TRX</label>
+                </div>
+                <div class="row">
+                  <div class="col-xl-12 mt-3">
+                    <button data-toggle="modal" data-target="#staticBackdrop" type="button" class="btn btn-primary btn-block">Open Boxes</button>
+                  </div>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+
+     
+
+        <div class="col-xl-3 mt-3"> 
+
+          <div class="card">
+            <div class="card-body" style="padding-left:0px; padding-right:0px;padding-bottom:0px;">
+              <h5 class="card-title" style="padding-left: 20px;padding-right: 20px;">
+                Live Feed
+                <button
+                  style="float:right;font-size:15px;margin-top:-10px;"
+                  class="btn btn-sm btn-secondary"
+                  data-container="body"
+                  data-toggle="popover"
+                  data-placement="bottom"
+                  data-html="true"
+                  data-content="Box purchases, box openings and earnings withdrawls are displayed.<br/>More details: <a href='https://justgame.hostedwiki.co/'>Read the WIKI</a>">
+                  ?
+                </button>
+              </h5>
+              <div id="live-feed-list" class="list-group list-group-flush" style="overflow-y:auto; min-height:500px;max-height:1330px;text-align:left;"></div>
+            </div>
+          </div>
+        </div>  
+        
+      </div>
+
+      <footer class="text-muted mt-5">
+        <div class="container">
+          <p class="float-right">
+            <a href="#" class="text-light">Back to top</a>
+          </p>
+          <p>This is the part of an A.I that tries to keep itself alive.</p>
+          <p>Just.game is speculative technological entertainment.</p>
+        </div>
+      </footer>
+    </div>
+
+    <!-- Open Box Confirm -->
+    <div class="modal fade" id="staticBackdrop" data-backdrop="static" tabindex="-1" role="dialog" aria-labelledby="staticBackdropLabel" aria-hidden="true">
+      <div class="modal-dialog" role="document">
+        <div class="modal-content">
+          <div class="modal-header">
+            <h5 class="modal-title" id="staticBackdropLabel">Open Boxes</h5>
+            <button type="button" class="close" data-dismiss="modal" aria-label="Close">
+              <span aria-hidden="true">&times;</span>
+            </button>
+          </div>
+          <div class="modal-body">
+            If you open your boxes they will be destroyed and you will exit the game, you will receive <span class="box-open-reward-total"></span>. 
+            <br/>
+            <br/>
+            Are you sure you want to open?
+          </div>
+          <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" data-dismiss="modal">Close</button>
+            <button id="btn-open" type="button" class="btn btn-primary">Understood</button id="btn-open">
+          </div>
+        </div>
+      </div>
+    </div>
+
+
+     
+
+  </body>
+</html>
